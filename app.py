@@ -155,8 +155,8 @@ def home_page():
 
     st.markdown('<div class="big-title">Dev IoT Analyzer</div>', unsafe_allow_html=True)
     st.markdown(
-        '<div class="subtitle">Live view of energy for the FUB building, '
-        'Trail Version.</div>',
+        '<div class="subtitle">Live view of energy for the FUB building. '
+        '(Trail Version)</div>',
         unsafe_allow_html=True,
     )
 
