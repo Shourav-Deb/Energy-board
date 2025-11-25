@@ -221,10 +221,10 @@ def home_page():
     with col_r:
         st.markdown("#### Quick actions")
         if st.button("📡 Open devices list"):
-            go("📂 Devices")
+            go add_device_page()
             st.rerun()
         if st.button("➕ Add new plug"):
-            go("add_device")
+            go("➕ Add Device")
             st.rerun()
         st.markdown("---")
         st.markdown(
@@ -280,7 +280,7 @@ def add_device_page():
     )
 
     with st.form("add_device_form"):
-        name = st.text_input("Friendly name (e.g., FUB Lab Plug 1)")
+        name = st.text_input("Friendly Name (e.g., FUB Lab Plug 1)")
         device_id = st.text_input("Tuya Device ID")
         submitted = st.form_submit_button("Add device")
 
@@ -432,8 +432,7 @@ def device_detail_page():
 def reports_page():
     st.markdown('<div class="big-title">Reports & Aggregations</div>', unsafe_allow_html=True)
     st.info(
-        "For now, you can use each device's historical chart and the overview. "
-        "You can extend this page with room-wise / floor-wise aggregations later."
+        "This service is down for maintenance right now. We'll be back online soon. Thanks for your patience."
     )
 
 
