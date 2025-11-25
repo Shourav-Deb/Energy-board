@@ -1,7 +1,6 @@
 from pathlib import Path
 from datetime import datetime, timedelta
 
-import pandas as pd
 import streamlit as st
 from streamlit_autorefresh import st_autorefresh
 import plotly.express as px
@@ -9,7 +8,7 @@ import plotly.express as px
 from devices import load_devices, save_devices
 from get_power_data import fetch_and_log_once
 from tuya_api import control_device, get_token
-from tuya_api_mongo import latest_docs, range_docs
+from tuya_api_mongo import latest_docs, range_docs, get_client, MONGODB_URI
 from billing import (
     daily_monthly_for,
     aggregate_totals_all_devices,
@@ -19,8 +18,59 @@ from billing import (
 # ------------------------------------------------------------------------------------
 # Page setup
 
-st.set_page_config(page_title="Smart Energy Dashboard", layout="wide")
+st.set_page_config(page_title="FUB Smart Energy Board", layout="wide")
 DATA_DIR = Path("data")
+
+# Global styles (premium-ish)
+st.markdown(
+    """
+    <style>
+    .main .block-container {
+        padding-top: 1.2rem;
+        padding-bottom: 1.5rem;
+        max-width: 1200px;
+    }
+    .big-title {
+        font-size: 2.3rem;
+        font-weight: 750;
+        margin-bottom: 0.1rem;
+    }
+    .subtitle {
+        color: #9ca3af;
+        font-size: 0.95rem;
+        margin-bottom: 1.5rem;
+    }
+    .card {
+        padding: 1rem 1.2rem;
+        border-radius: 0.85rem;
+        background: #020617;
+        border: 1px solid #1f2937;
+    }
+    .card h3 {
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: #9ca3af;
+        margin-bottom: 0.35rem;
+    }
+    .card .value {
+        font-size: 1.3rem;
+        font-weight: 650;
+    }
+    .pill {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.2rem 0.55rem;
+        border-radius: 999px;
+        border: 1px solid #1f2937;
+        font-size: 0.76rem;
+        color: #9ca3af;
+        gap: 0.4rem;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
 
 # Session state defaults
 if "page" not in st.session_state:
@@ -42,30 +92,61 @@ def go_device(device_id: str, device_name: str):
 
 
 # ------------------------------------------------------------------------------------
+# Sidebar: navigation + Mongo status
+
+# Mongo health check
+try:
+    _client = get_client()
+    mongo_ok = _client is not None
+except Exception as _e:
+    mongo_ok = False
+    mongo_err = str(_e)
+else:
+    mongo_err = ""
+
+with st.sidebar:
+    st.markdown("### 🧭 Navigation")
+    choice = st.radio(
+        "",
+        ["🏠 Overview", "📂 Devices", "➕ Add Device", "⚙️ Manage Devices", "📈 Reports"],
+        index=0,
+    )
+
+    mapping = {
+        "🏠 Overview": "home",
+        "📂 Devices": "devices",
+        "➕ Add Device": "add_device",
+        "⚙️ Manage Devices": "manage_devices",
+        "📈 Reports": "reports",
+    }
+    st.session_state.page = mapping[choice]
+
+    st.markdown("---")
+    st.markdown("### 🗄️ Data backend")
+    st.write("Mongo URI set:", bool(MONGODB_URI))
+    st.write("Connected:", mongo_ok)
+    if not mongo_ok:
+        st.caption("Check MONGODB_URI in secrets / .env")
+    st.markdown("---")
+    st.caption("FUB Building Energy Management Demo")
+
+
+# ------------------------------------------------------------------------------------
 # Pages
 
 def home_page():
-    st.title("💡 Smart Energy Dashboard")
-
     devices = load_devices()
+
+    st.markdown('<div class="big-title">FUB Energy Command Center ⚡</div>', unsafe_allow_html=True)
+    st.markdown(
+        '<div class="subtitle">Live view of plug-level energy for the FUB building — '
+        'real-time power, voltage and approximate billing in BDT.</div>',
+        unsafe_allow_html=True,
+    )
+
     if not devices:
-        st.info("No devices yet. Go to **Add Device** from the sidebar.")
+        st.info("No devices yet. Use **Add Device** from the left sidebar to register at least one Tuya plug.")
         return
-
-    # Quick actions
-    st.markdown("#### Quick actions")
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        if st.button("📂 My Devices"):
-            go("devices")
-    with col2:
-        if st.button("➕ Add Device"):
-            go("add_device")
-    with col3:
-        if st.button("📈 Range Reports"):
-            go("reports")
-
-    st.markdown("---")
 
     # Totals
     (
@@ -79,58 +160,115 @@ def home_page():
 
     c1, c2, c3 = st.columns(3)
     with c1:
-        st.metric("⚡ Total Power (now)", f"{total_power_now:.2f} W")
-        st.metric("🔌 Voltage (max)", f"{present_voltage:.1f} V")
+        st.markdown('<div class="card">', unsafe_allow_html=True)
+        st.markdown("<h3>Instant Load</h3>", unsafe_allow_html=True)
+        st.markdown(f'<div class="value">{total_power_now:.1f} W</div>', unsafe_allow_html=True)
+        st.caption("Total active power drawn across all connected plugs.")
+        st.markdown("</div>", unsafe_allow_html=True)
     with c2:
-        st.metric("📅 Today – Energy", f"{today_kwh:.3f} kWh")
-        st.metric("📅 Today – Bill", f"{today_bill:.2f} ৳")
+        st.markdown('<div class="card">', unsafe_allow_html=True)
+        st.markdown("<h3>Today (kWh & Bill)</h3>", unsafe_allow_html=True)
+        st.markdown(
+            f'<div class="value">{today_kwh:.3f} kWh</div>', unsafe_allow_html=True
+        )
+        st.caption(f"Estimated cost: **{today_bill:.2f} BDT**")
+        st.markdown("</div>", unsafe_allow_html=True)
     with c3:
-        st.metric("🗓 Month – Energy", f"{month_kwh:.3f} kWh")
-        st.metric("🗓 Month – Bill", f"{month_bill:.2f} ৳")
+        st.markdown('<div class="card">', unsafe_allow_html=True)
+        st.markdown("<h3>This Month</h3>", unsafe_allow_html=True)
+        st.markdown(
+            f'<div class="value">{month_kwh:.3f} kWh</div>',
+            unsafe_allow_html=True,
+        )
+        st.caption(f"Projected bill so far: **{month_bill:.2f} BDT**")
+        st.markdown("</div>", unsafe_allow_html=True)
 
-    st.markdown("### Last 24h — Power & Voltage (all devices)")
+    st.markdown("")
+    col_l, col_r = st.columns([3, 1])
+    with col_l:
+        st.markdown("#### Last 24 hours — Power & Voltage")
+        ts = aggregate_timeseries_24h(devices, resample_rule="5T")
+        if ts.empty:
+            st.info(
+                "No historical data in MongoDB yet.\n\n"
+                "- Open a device page and wait a few refreshes, or\n"
+                "- Run `data_collector.py` locally/online."
+            )
+        else:
+            fig = px.line(
+                ts,
+                x="timestamp",
+                y=["power_sum_W", "voltage_avg_V"],
+                labels={"value": "Value", "variable": "Metric"},
+            )
+            fig.update_layout(margin=dict(l=10, r=10, t=30, b=10))
+            st.plotly_chart(fig, use_container_width=True)
 
-    ts = aggregate_timeseries_24h(devices, resample_rule="5T")
-    if ts.empty:
-        st.info("No data available yet. Open a device page or run data_collector.py.")
-        return
-
-    fig = px.line(
-        ts,
-        x="timestamp",
-        y=["power_sum_W", "voltage_avg_V"],
-        labels={"value": "Value", "variable": "Metric"},
-    )
-    st.plotly_chart(fig, use_container_width=True)
+    with col_r:
+        st.markdown("#### Quick actions")
+        if st.button("📂 Open devices list"):
+            go("devices")
+            st.experimental_rerun()
+        if st.button("➕ Add new plug"):
+            go("add_device")
+            st.experimental_rerun()
+        st.markdown("---")
+        st.markdown(
+            '<span class="pill">Devices online: '
+            f'{len(devices)}</span>',
+            unsafe_allow_html=True,
+        )
 
 
 def devices_page():
-    st.title("📂 My Devices")
+    st.markdown('<div class="big-title">All Connected Devices</div>', unsafe_allow_html=True)
+    st.markdown(
+        '<div class="subtitle">Each tile represents a Tuya smart plug mapped to a load in the FUB building.</div>',
+        unsafe_allow_html=True,
+    )
+
     devs = load_devices()
     if not devs:
-        st.info("No devices found. Add one from **Add Device**.")
+        st.info("No devices found. Add one from **Add Device** in the sidebar.")
         return
 
     for d in devs:
-        col1, col2, col3 = st.columns([3, 3, 1])
-        with col1:
-            st.write(f"**{d.get('name','(no name)')}**")
-            st.caption(d.get("id"))
-        with col2:
-            if st.button("View", key=f"view_{d['id']}"):
-                go_device(d["id"], d.get("name", "Device"))
-                st.experimental_rerun()
-        with col3:
-            pass
+        with st.container():
+            col1, col2, col3 = st.columns([4, 3, 2])
+            with col1:
+                st.markdown(
+                    f"**{d.get('name','(no name)')}**  \n"
+                    f"`{d.get('id')}`",
+                )
+            with col2:
+                # Show latest instant power if available
+                df_recent = latest_docs(d["id"], n=1)
+                if not df_recent.empty:
+                    row = df_recent.iloc[-1]
+                    st.caption(
+                        f"Last: {row.get('power', 0):.1f} W @ "
+                        f"{row.get('voltage', 0):.1f} V"
+                    )
+                else:
+                    st.caption("No readings stored yet.")
+            with col3:
+                if st.button("Open dashboard", key=f"view_{d['id']}"):
+                    go_device(d["id"], d.get("name", "Device"))
+                    st.experimental_rerun()
+        st.markdown("---")
 
 
 def add_device_page():
-    st.title("➕ Add Device")
+    st.markdown('<div class="big-title">Add a New FUB Device</div>', unsafe_allow_html=True)
+    st.markdown(
+        '<div class="subtitle">Register a Tuya plug by its device ID from the Tuya IoT Cloud console.</div>',
+        unsafe_allow_html=True,
+    )
 
     with st.form("add_device_form"):
-        name = st.text_input("Device name")
+        name = st.text_input("Friendly name (e.g., FUB Lab Plug 1)")
         device_id = st.text_input("Tuya Device ID")
-        submitted = st.form_submit_button("Add")
+        submitted = st.form_submit_button("Add device")
 
     if submitted:
         if not device_id.strip():
@@ -139,22 +277,22 @@ def add_device_page():
             devs = load_devices()
             devs.append({"name": name or device_id, "id": device_id.strip()})
             save_devices(devs)
-            st.success("Device added.")
-            st.button("Back to devices", on_click=lambda: go("devices"))
+            st.success("Device added successfully.")
+            st.info("Now open the **Devices** page and click into the device to start logging data.")
 
 
 def manage_devices_page():
-    st.title("⚙️ Manage Devices")
+    st.markdown('<div class="big-title">Manage Devices</div>', unsafe_allow_html=True)
     devs = load_devices()
     if not devs:
-        st.info("No devices to manage.")
+        st.info("No devices to manage yet.")
         return
 
     to_keep = []
     for d in devs:
-        col1, col2 = st.columns([4, 1])
+        col1, col2 = st.columns([5, 1])
         with col1:
-            st.write(f"**{d.get('name','(no name)')}** – {d.get('id')}")
+            st.write(f"**{d.get('name','(no name)')}** – `{d.get('id')}`")
         with col2:
             keep = not st.checkbox("Delete", key=f"del_{d['id']}")
         if keep:
@@ -170,13 +308,16 @@ def device_detail_page():
     dev_name = st.session_state.current_device_name or dev_id
 
     if not dev_id:
-        st.warning("No device selected.")
+        st.warning("No device selected. Open **Devices** and choose one.")
         return
 
     # Auto refresh every 30s
     st_autorefresh(interval=30_000, key="device_autorefresh")
 
-    st.title(f"🔎 Device: {dev_name}")
+    st.markdown(
+        f'<div class="big-title">Device: {dev_name}</div>',
+        unsafe_allow_html=True,
+    )
     st.caption(dev_id)
 
     # Fetch and log one reading on every load/refresh
@@ -185,49 +326,68 @@ def device_detail_page():
     except Exception as e:
         st.error(f"Tuya API error while logging data: {e}")
 
-    # Control section
-    st.markdown("### 🔘 Control")
-    c1, c2 = st.columns(2)
-    with c1:
-        if st.button("Turn ON"):
-            token = get_token()
-            res = control_device(dev_id, token, "switch_1", True)
-            st.write(res)
-    with c2:
-        if st.button("Turn OFF"):
-            token = get_token()
-            res = control_device(dev_id, token, "switch_1", False)
-            st.write(res)
+    # Layout: top cards + control + charts
+    top1, top2 = st.columns([2, 1])
 
-    # Recent power
-    st.markdown("### ⚡ Recent Power (last 50 samples)")
+    with top1:
+        st.markdown("#### Live snapshot")
+        df_recent = latest_docs(dev_id, n=20)
+        if not df_recent.empty:
+            last = df_recent.iloc[-1]
+            c1, c2, c3 = st.columns(3)
+            with c1:
+                st.metric("Power", f"{float(last.get('power', 0)):.1f} W")
+            with c2:
+                st.metric("Voltage", f"{float(last.get('voltage', 0)):.1f} V")
+            with c3:
+                st.metric("Current", f"{float(last.get('current', 0)):.3f} A")
+        else:
+            st.info("No readings stored yet for this device.")
+
+    with top2:
+        st.markdown("#### Control")
+        c1, c2 = st.columns(2)
+        with c1:
+            if st.button("Turn ON"):
+                token = get_token()
+                res = control_device(dev_id, token, "switch_1", True)
+                st.json(res)
+        with c2:
+            if st.button("Turn OFF"):
+                token = get_token()
+                res = control_device(dev_id, token, "switch_1", False)
+                st.json(res)
+
+    # Recent power chart
+    st.markdown("### Recent Power (last 50 samples)")
     df_recent = latest_docs(dev_id, n=50)
     if not df_recent.empty:
-        fig = px.line(df_recent, x="timestamp", y="power", title="Power (W)")
+        fig = px.line(df_recent, x="timestamp", y="power", title="")
+        fig.update_layout(margin=dict(l=10, r=10, t=10, b=10))
         st.plotly_chart(fig, use_container_width=True)
     else:
-        st.info("No data yet. Wait a few refresh cycles.")
+        st.info("No data yet. Leave this page open for a few refresh cycles.")
 
     # Billing
-    st.markdown("### 💰 Bill Estimate")
+    st.markdown("### Billing Estimate")
     d_units, d_cost, m_units, m_cost = daily_monthly_for(dev_id)
     b1, b2 = st.columns(2)
     with b1:
-        st.metric("📅 Today kWh", f"{d_units:.3f}")
-        st.metric("💸 Today BDT", f"{d_cost:.2f}")
+        st.metric("Today (kWh)", f"{d_units:.3f}")
+        st.metric("Today (BDT)", f"{d_cost:.2f}")
     with b2:
-        st.metric("🗓 Month kWh", f"{m_units:.3f}")
-        st.metric("💰 Month BDT", f"{m_cost:.2f}")
+        st.metric("This month (kWh)", f"{m_units:.3f}")
+        st.metric("This month (BDT)", f"{m_cost:.2f}")
 
     # Historical
-    st.markdown("### 🕰️ Historical Data")
+    st.markdown("### Historical Analysis")
     c1, c2, c3 = st.columns(3)
     with c1:
         start_date = st.date_input(
-            "Start", value=datetime.now().date() - timedelta(days=1)
+            "Start date", value=datetime.now().date() - timedelta(days=1)
         )
     with c2:
-        end_date = st.date_input("End", value=datetime.now().date())
+        end_date = st.date_input("End date", value=datetime.now().date())
     with c3:
         agg = st.selectbox("Aggregation", ["raw", "1-min", "5-min", "15-min"], index=1)
 
@@ -248,42 +408,20 @@ def device_detail_page():
             y="power",
             title=f"Power over time ({agg})",
         )
+        fig.update_layout(margin=dict(l=10, r=10, t=30, b=10))
         st.plotly_chart(fig, use_container_width=True)
-        st.dataframe(plot_df.tail(200))
+        st.expander("Raw data (tail)").dataframe(plot_df.tail(200))
     else:
         st.info("No data in the selected range.")
 
 
 def reports_page():
-    st.title("📈 Range Reports (all devices)")
-    st.info("For now, you can use each device's historical chart. "
-            "You can extend this page later with advanced filters.")
+    st.markdown('<div class="big-title">Reports & Aggregations</div>', unsafe_allow_html=True)
+    st.info(
+        "For now, you can use each device's historical chart and the overview. "
+        "You can extend this page with room-wise / floor-wise aggregations later."
+    )
 
-
-# ------------------------------------------------------------------------------------
-# Sidebar navigation
-
-choice = st.sidebar.radio(
-    "Navigate",
-    ["Home", "My Devices", "Add Device", "Manage Devices", "Range Reports"],
-    index=["home", "devices", "add_device", "manage_devices", "reports"].index(
-        st.session_state.page
-        if st.session_state.page in ["home", "devices", "add_device", "manage_devices", "reports"]
-        else "home"
-    ),
-)
-
-mapping = {
-    "Home": "home",
-    "My Devices": "devices",
-    "Add Device": "add_device",
-    "Manage Devices": "manage_devices",
-    "Range Reports": "reports",
-}
-st.session_state.page = mapping[choice]
-
-st.sidebar.markdown("---")
-st.sidebar.caption("Auto-logging via data_collector.py or this page.")
 
 # ------------------------------------------------------------------------------------
 # Router

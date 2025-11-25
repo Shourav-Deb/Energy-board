@@ -5,7 +5,7 @@ import pandas as pd
 from tuya_api_mongo import range_docs, latest_docs
 from helpers import dhaka_tz
 
-# Bangladesh slab rates (example – update if needed)
+# Bangladesh slab rates (example – adjust to your project if needed)
 RATES = [
     (75, 5.26),
     (200, 7.20),
@@ -42,7 +42,8 @@ def daily_monthly_for(device_id: str):
     day_end = day_end_local.astimezone(timezone.utc).replace(tzinfo=None)
 
     ddf = range_docs(device_id, day_start, day_end)
-    d_units = round(float(ddf["energy_kWh"].sum()) if not ddf.empty else 0.0, 3)
+    d_units = round(float(ddf["energy_kWh"].max() - ddf["energy_kWh"].min())
+                    if not ddf.empty else 0.0, 3)
     d_cost = _tier_cost(d_units)
 
     # Month
@@ -56,7 +57,8 @@ def daily_monthly_for(device_id: str):
     m_end = next_month_local.astimezone(timezone.utc).replace(tzinfo=None)
 
     mdf = range_docs(device_id, m_start, m_end)
-    m_units = round(float(mdf["energy_kWh"].sum()) if not mdf.empty else 0.0, 3)
+    m_units = round(float(mdf["energy_kWh"].max() - mdf["energy_kWh"].min())
+                    if not mdf.empty else 0.0, 3)
     m_cost = _tier_cost(m_units)
 
     return d_units, d_cost, m_units, m_cost
@@ -108,7 +110,7 @@ def aggregate_totals_all_devices(devices: list) -> tuple:
     for did in dev_ids:
         ddf = range_docs(did, day_start, day_end)
         if not ddf.empty and "energy_kWh" in ddf.columns:
-            total_kwh_today += float(ddf["energy_kWh"].sum())
+            total_kwh_today += float(ddf["energy_kWh"].max() - ddf["energy_kWh"].min())
     total_kwh_today = round(total_kwh_today, 3)
     today_bill_bdt = _tier_cost(total_kwh_today)
 
@@ -126,7 +128,7 @@ def aggregate_totals_all_devices(devices: list) -> tuple:
     for did in dev_ids:
         mdf = range_docs(did, m_start, m_end)
         if not mdf.empty and "energy_kWh" in mdf.columns:
-            total_kwh_month += float(mdf["energy_kWh"].sum())
+            total_kwh_month += float(mdf["energy_kWh"].max() - mdf["energy_kWh"].min())
     total_kwh_month = round(total_kwh_month, 3)
     month_bill_bdt = _tier_cost(total_kwh_month)
 

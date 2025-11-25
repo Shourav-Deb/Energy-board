@@ -18,10 +18,21 @@ except Exception:
     _secrets = {}
 
 
+def _strip_outer_quotes(val: str) -> str:
+    val = val.strip()
+    if len(val) >= 2 and ((val[0] == '"' and val[-1] == '"') or (val[0] == "'" and val[-1] == "'")):
+        return val[1:-1]
+    return val
+
+
 def _get_secret(name: str, default: str = "") -> str:
     if name in _secrets:
-        return str(_secrets[name])
-    return os.getenv(name, default)
+        val = str(_secrets[name])
+        return _strip_outer_quotes(val)
+    val = os.getenv(name, default)
+    if val is None:
+        return default
+    return _strip_outer_quotes(str(val))
 
 
 MONGODB_URI = _get_secret("MONGODB_URI", "")
@@ -32,8 +43,15 @@ _client: Optional[MongoClient] = None
 
 def get_client() -> Optional[MongoClient]:
     global _client
-    if _client is None and MONGODB_URI:
-        _client = MongoClient(MONGODB_URI, tls=True)
+    if _client is None:
+        if not MONGODB_URI:
+            print("[Mongo] MONGODB_URI is empty. Check your .env or Streamlit secrets.")
+            return None
+        try:
+            _client = MongoClient(MONGODB_URI, tls=True)
+        except Exception as e:
+            print(f"[Mongo] Error creating MongoClient: {e}")
+            _client = None
     return _client
 
 
@@ -69,6 +87,7 @@ def insert_reading(device_id: str, doc: dict):
     """
     coll = _get_collection(device_id)
     if coll is None:
+        print("[Mongo] insert_reading: collection is None (no client/DB).")
         return
     doc = dict(doc)
     ts = doc.get("timestamp")

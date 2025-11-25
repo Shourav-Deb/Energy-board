@@ -8,14 +8,12 @@ def fetch_and_log_once(device_id: str, device_name: str = ""):
     token = get_token()
     raw = get_device_status(device_id, token)
 
-    # DEBUG: see what Tuya really sends
-    print("RAW TUYA STATUS:", raw)
-
     if not raw.get("success"):
+        print("Tuya API error:", raw)
         return {"error": raw}
 
     v, c, p, e = parse_metrics(raw)
-    print("PARSED:", v, c, p, e)  # DEBUG
+    print("Parsed metrics:", v, c, p, e)
 
     doc = build_doc(device_id, device_name, v, c, p, e)
     insert_reading(device_id, doc)

@@ -14,15 +14,11 @@ def parse_metrics(status_json: dict):
     """
     Extract voltage, current, power and energy_kWh from Tuya status JSON.
 
-    DP codes (from your Phase 1 doc):
+    Your device DPs (from Phase 1 doc):
       - cur_voltage: integer, /10 → V
       - cur_power:   integer, /10 → W
       - cur_current: integer, /1000 → A
       - add_ele:     integer, /1000 → kWh (cumulative)
-
-    We will:
-      - return voltage, current, power from the cur_* codes
-      - return energy_kwh as the cumulative add_ele value
     """
     result = status_json.get("result", [])
     m = {x.get("code"): x.get("value") for x in result}
@@ -32,15 +28,12 @@ def parse_metrics(status_json: dict):
     raw_current = m.get("cur_current") or 0
     raw_add_ele = m.get("add_ele") or 0
 
-    voltage = raw_voltage / 10.0       # deciV → V
-    power = raw_power / 10.0           # deciW → W
-    current = raw_current / 1000.0     # mA → A
-
-    # Cumulative energy in kWh from the device
-    energy_kwh = raw_add_ele / 1000.0  # scale 3 → kWh
+    voltage = raw_voltage / 10.0
+    power = raw_power / 10.0
+    current = raw_current / 1000.0
+    energy_kwh = raw_add_ele / 1000.0  # cumulative device-side kWh
 
     return voltage, current, power, energy_kwh
-
 
 
 def build_doc(device_id: str, device_name: str, v: float, c: float, p: float, e: float):
