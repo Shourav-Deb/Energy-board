@@ -106,20 +106,34 @@ else:
 
 with st.sidebar:
     st.markdown("### 🧭 Navigation")
-    choice = st.radio(
-        "",
-        ["🏠 Overview", "📂 Devices", "➕ Add Device", "⚙️ Manage Devices", "📈 Reports"],
-        index=0,
-    )
 
-    mapping = {
+    options = ["🏠 Overview", "📂 Devices", "➕ Add Device", "⚙️ Manage Devices", "📈 Reports"]
+    label_to_page = {
         "🏠 Overview": "home",
         "📂 Devices": "devices",
         "➕ Add Device": "add_device",
         "⚙️ Manage Devices": "manage_devices",
         "📈 Reports": "reports",
     }
-    st.session_state.page = mapping[choice]
+    page_to_label = {v: k for k, v in label_to_page.items()}
+
+    # Decide which label should appear selected in the radio
+    current_page = st.session_state.page
+    if current_page in page_to_label:
+        default_label = page_to_label[current_page]
+    else:
+        default_label = "🏠 Overview"
+
+    choice = st.radio(
+        "",
+        options,
+        index=options.index(default_label),
+        key="nav_choice",
+    )
+
+    # IMPORTANT: do NOT override when we are already on the device detail view
+    if st.session_state.page != "device_detail":
+        st.session_state.page = label_to_page[choice]
 
     st.markdown("---")
     st.markdown("### 🗄️ Data backend")
@@ -129,6 +143,7 @@ with st.sidebar:
         st.caption("Check MONGODB_URI in secrets / .env")
     st.markdown("---")
     st.caption("FUB Building Energy Management Demo")
+
 
 
 # ------------------------------------------------------------------------------------
