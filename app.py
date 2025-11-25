@@ -152,9 +152,9 @@ with st.sidebar:
 def home_page():
     devices = load_devices()
 
-    st.markdown('<div class="big-title">FUB Energy Command Center ⚡</div>', unsafe_allow_html=True)
+    st.markdown('<div class="big-title">FUB Energy Monitor Center</div>', unsafe_allow_html=True)
     st.markdown(
-        '<div class="subtitle">Live view of plug-level energy for the FUB building — '
+        '<div class="subtitle">Live view of energy for the FUB building, '
         'real-time power, voltage and approximate billing in BDT.</div>',
         unsafe_allow_html=True,
     )
@@ -201,13 +201,12 @@ def home_page():
     st.markdown("")
     col_l, col_r = st.columns([3, 1])
     with col_l:
-        st.markdown("#### Last 24 hours — Power & Voltage")
+        st.markdown("#### Last 24 hours Power & Voltage")
         ts = aggregate_timeseries_24h(devices, resample_rule="5T")
         if ts.empty:
             st.info(
                 "No historical data in MongoDB yet.\n\n"
-                "- Open a device page and wait a few refreshes, or\n"
-                "- Run `data_collector.py` locally/online."
+                "- Open a device page and wait a few refreshes"
             )
         else:
             fig = px.line(
@@ -221,7 +220,7 @@ def home_page():
 
     with col_r:
         st.markdown("#### Quick actions")
-        if st.button("📂 Open devices list"):
+        if st.button("📡 Open devices list"):
             go("devices")
             st.rerun()
         if st.button("➕ Add new plug"):
