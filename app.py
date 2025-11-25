@@ -109,11 +109,11 @@ with st.sidebar:
 
     options = ["🏠 Overview", "📂 Devices", "➕ Add Device", "⚙️ Manage Devices", "📈 Reports"]
     label_to_page = {
-        "🏠 Overview": "home",
-        "📂 Devices": "devices",
+        "🛖 Overview": "home",
+        "🕼 Devices": "devices",
         "➕ Add Device": "add_device",
-        "⚙️ Manage Devices": "manage_devices",
-        "📈 Reports": "reports",
+        "⚙🪹 Manage Devices": "manage_devices",
+        "🗏 Reports": "reports",
     }
     page_to_label = {v: k for k, v in label_to_page.items()}
 
@@ -136,13 +136,13 @@ with st.sidebar:
         st.session_state.page = label_to_page[choice]
 
     st.markdown("---")
-    st.markdown("### 🗄️ Data backend")
-    st.write("Mongo URI set:", bool(MONGODB_URI))
+    st.markdown("### 🛢 Data Backend Status")
+    st.write("Mongo URI:", bool(MONGODB_URI))
     st.write("Connected:", mongo_ok)
     if not mongo_ok:
         st.caption("Check MONGODB_URI in secrets / .env")
     st.markdown("---")
-    st.caption("FUB Building Energy Management Demo")
+    st.caption("Powered by Shourav Deb")
 
 
 
@@ -152,10 +152,10 @@ with st.sidebar:
 def home_page():
     devices = load_devices()
 
-    st.markdown('<div class="big-title">FUB Energy Monitor Center</div>', unsafe_allow_html=True)
+    st.markdown('<div class="big-title">Dev IoT Analyzer</div>', unsafe_allow_html=True)
     st.markdown(
         '<div class="subtitle">Live view of energy for the FUB building, '
-        'real-time power, voltage and approximate billing in BDT.</div>',
+        'Trail Version.</div>',
         unsafe_allow_html=True,
     )
 
@@ -221,7 +221,7 @@ def home_page():
     with col_r:
         st.markdown("#### Quick actions")
         if st.button("📡 Open devices list"):
-            go(add_device_page())
+            go("devices")
             st.rerun()
         if st.button("➕ Add new plug"):
             go("add_device")
