@@ -1,19 +1,10 @@
-"""
-data_collector.py
-
-Run this in the background (locally or on a server) to keep logging
-power readings to MongoDB every INTERVAL_SECONDS.
-"""
-
 import time
 from datetime import datetime, timezone
-from zoneinfo import ZoneInfo
 
-from helpers import load_devices_local
+from helpers import load_devices_local, dhaka_tz
 from get_power_data import fetch_and_log_once
 
-DHAKA_TZ = ZoneInfo("Asia/Dhaka")
-INTERVAL_SECONDS = 10  # adjust as you like
+INTERVAL_SECONDS = 10 
 
 
 def main():
@@ -29,13 +20,14 @@ def main():
     try:
         while True:
             loop_start_utc = datetime.now(timezone.utc)
-            loop_start_local = loop_start_utc.astimezone(DHAKA_TZ)
+            loop_start_local = loop_start_utc.astimezone(dhaka_tz)
             print(
                 f"[collector] ==== New cycle at "
                 f"{loop_start_local.isoformat(timespec='seconds')} ===="
             )
 
-            devices = load_devices_local()  # reload each cycle
+           
+            devices = load_devices_local()
 
             for d in devices:
                 dev_id = d.get("id")
@@ -45,13 +37,13 @@ def main():
                     continue
                 try:
                     result = fetch_and_log_once(dev_id, dev_name)
-                    now_local = datetime.now(timezone.utc).astimezone(DHAKA_TZ)
+                    now_local = datetime.now(timezone.utc).astimezone(dhaka_tz)
                     print(
                         f"[collector] {now_local.isoformat(timespec='seconds')} | "
                         f"{dev_name or dev_id} -> {result}"
                     )
                 except Exception as e:
-                    now_local = datetime.now(timezone.utc).astimezone(DHAKA_TZ)
+                    now_local = datetime.now(timezone.utc).astimezone(dhaka_tz)
                     print(
                         f"[collector] ERROR at {now_local.isoformat(timespec='seconds')} "
                         f"for device {dev_name or dev_id}: {e}"

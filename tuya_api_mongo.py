@@ -7,10 +7,9 @@ from pymongo import MongoClient, ASCENDING, DESCENDING
 from pymongo.errors import PyMongoError
 from dotenv import load_dotenv
 
-# Load local .env
+
 load_dotenv()
 
-# Optional Streamlit secrets
 try:
     import streamlit as st
     _secrets = dict(st.secrets)
@@ -42,6 +41,7 @@ _client: Optional[MongoClient] = None
 
 
 def get_client() -> Optional[MongoClient]:
+    
     global _client
     if _client is None:
         if not MONGODB_URI:
@@ -81,10 +81,6 @@ def _get_collection(device_id: str):
 
 
 def insert_reading(device_id: str, doc: dict):
-    """
-    Insert a reading document into Mongo.
-    Converts tz-aware timestamp to naive UTC for consistent comparisons.
-    """
     coll = _get_collection(device_id)
     if coll is None:
         print("[Mongo] insert_reading: collection is None (no client/DB).")
@@ -119,7 +115,6 @@ def latest_docs(device_id: str, n: int = 50) -> pd.DataFrame:
 
 
 def range_docs(device_id: str, start: datetime, end: datetime) -> pd.DataFrame:
-    """Return readings for a device between start and end (inclusive)."""
     coll = _get_collection(device_id)
     if coll is None:
         return pd.DataFrame()

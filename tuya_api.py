@@ -6,10 +6,9 @@ import hashlib
 import requests
 from dotenv import load_dotenv
 
-# Load .env locally
+
 load_dotenv()
 
-# Try to read from Streamlit secrets if running in Streamlit Cloud
 try:
     import streamlit as st
     _secrets = dict(st.secrets)
@@ -54,7 +53,6 @@ _token_cache = {"value": None, "ts": 0.0, "ttl": 55.0}
 
 
 def get_token() -> str:
-    """Get and cache Tuya access token for ~55s."""
     if not ACCESS_ID or not ACCESS_SECRET:
         raise RuntimeError("Tuya credentials missing (check TUYA_ACCESS_ID / TUYA_ACCESS_SECRET).")
 
@@ -95,10 +93,6 @@ def get_device_status(device_id: str, token: str) -> dict:
 
 
 def control_device(device_id: str, token: str, code: str, value):
-    """
-    Send a control command to the device.
-    Example: code='switch_1', value=True / False
-    """
     path = f"/v1.0/devices/{device_id}/commands"
     body = json.dumps({"commands": [{"code": code, "value": value}]})
     sign, t = _make_sign(ACCESS_ID, ACCESS_SECRET, "POST", path, token, body)
