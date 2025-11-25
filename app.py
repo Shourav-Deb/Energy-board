@@ -221,7 +221,7 @@ def home_page():
     with col_r:
         st.markdown("#### Quick actions")
         if st.button("📡 Open devices list"):
-            go("devices")
+            go("📂 Devices")
             st.rerun()
         if st.button("➕ Add new plug"):
             go("add_device")
