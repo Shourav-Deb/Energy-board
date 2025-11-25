@@ -109,7 +109,7 @@ with st.sidebar:
 
     options = ["🏠 Overview", "📂 Devices", "➕ Add Device", "⚙️ Manage Devices", "📈 Reports"]
     label_to_page = {
-        "🛖 Overview": "home",
+        " Overview": "home",
         "🕼 Devices": "devices",
         "➕ Add Device": "add_device",
         "⚙🪹 Manage Devices": "manage_devices",
