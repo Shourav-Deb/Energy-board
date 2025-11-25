@@ -208,10 +208,10 @@ def home_page():
         st.markdown("#### Quick actions")
         if st.button("📂 Open devices list"):
             go("devices")
-            st.experimental_rerun()
+            st.rerun()
         if st.button("➕ Add new plug"):
             go("add_device")
-            st.experimental_rerun()
+            st.rerun()
         st.markdown("---")
         st.markdown(
             '<span class="pill">Devices online: '
@@ -254,7 +254,7 @@ def devices_page():
             with col3:
                 if st.button("Open dashboard", key=f"view_{d['id']}"):
                     go_device(d["id"], d.get("name", "Device"))
-                    st.experimental_rerun()
+                    st.rerun()
         st.markdown("---")
 
 
