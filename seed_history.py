@@ -24,8 +24,8 @@ from pymongo import MongoClient
 # -------------------------------------------------------
 
 # Your real Tuya device ID (must match devices.json)
-DEVICE_ID = "YOUR_TUYA_DEVICE_ID_1"          # <-- put your real device ID here
-DEVICE_NAME = "FUB 401 - Lab Plug"           # friendly label for the device
+DEVICE_ID = "bfe815bb9d8b656b04mya3"          # <-- put your real device ID here
+DEVICE_NAME = "FUB 401 - Lab PC"           # friendly label for the device
 
 # Number of past days to simulate (excluding today)
 PAST_DAYS = 5
