@@ -18,7 +18,7 @@ from billing import (
 # ------------------------------------------------------------------------------------
 # Page setup
 
-st.set_page_config(page_title="FUB Smart Energy Board", layout="wide")
+st.set_page_config(page_title="Deb IoT Analyzer", layout="wide")
 DATA_DIR = Path("data")
 
 # Global styles (premium-ish)
@@ -105,7 +105,7 @@ else:
     mongo_err = ""
 
 with st.sidebar:
-    st.markdown("### 🧭 Navigation")
+    st.markdown("### Navigation Panel")
 
     options = ["🏠 Overview", "📂 Devices", "➕ Add Device", "⚙️ Manage Devices", "📈 Reports"]
     label_to_page = {
@@ -136,13 +136,14 @@ with st.sidebar:
         st.session_state.page = label_to_page[choice]
 
     st.markdown("---")
-    st.markdown("### 🗄️ Data backend")
-    st.write("Mongo URI set:", bool(MONGODB_URI))
+    st.markdown("### 🛢 Data backend")
+    st.write("Mongo URI:", bool(MONGODB_URI))
     st.write("Connected:", mongo_ok)
     if not mongo_ok:
         st.caption("Check MONGODB_URI in secrets / .env")
     st.markdown("---")
-    st.caption("FUB Building Energy Management Demo")
+    st.caption("Powered by Shourav Deb")
+    st.caption("Contact: heyneeddev@gmail.com")
 
 
 
@@ -152,10 +153,10 @@ with st.sidebar:
 def home_page():
     devices = load_devices()
 
-    st.markdown('<div class="big-title">FUB Energy Command Center ⚡</div>', unsafe_allow_html=True)
+    st.markdown('<div class="big-title">Dev IoT Analyzer</div>', unsafe_allow_html=True)
     st.markdown(
-        '<div class="subtitle">Live view of plug-level energy for the FUB building — '
-        'real-time power, voltage and approximate billing in BDT.</div>',
+        '<div class="subtitle">Live view of energy for the FUB building, '
+        'Trail Version.</div>',
         unsafe_allow_html=True,
     )
 
@@ -201,13 +202,12 @@ def home_page():
     st.markdown("")
     col_l, col_r = st.columns([3, 1])
     with col_l:
-        st.markdown("#### Last 24 hours — Power & Voltage")
+        st.markdown("#### Last 24 hours Power & Voltage")
         ts = aggregate_timeseries_24h(devices, resample_rule="5T")
         if ts.empty:
             st.info(
                 "No historical data in MongoDB yet.\n\n"
-                "- Open a device page and wait a few refreshes, or\n"
-                "- Run `data_collector.py` locally/online."
+                "- Open a device page, Add a device and wait a few refreshes"
             )
         else:
             fig = px.line(
@@ -221,7 +221,7 @@ def home_page():
 
     with col_r:
         st.markdown("#### Quick actions")
-        if st.button("📂 Open devices list"):
+        if st.button("📡 Open devices list"):
             go("devices")
             st.rerun()
         if st.button("➕ Add new plug"):
@@ -274,14 +274,14 @@ def devices_page():
 
 
 def add_device_page():
-    st.markdown('<div class="big-title">Add a New FUB Device</div>', unsafe_allow_html=True)
+    st.markdown('<div class="big-title">Add a New Device</div>', unsafe_allow_html=True)
     st.markdown(
         '<div class="subtitle">Register a Tuya plug by its device ID from the Tuya IoT Cloud console.</div>',
         unsafe_allow_html=True,
     )
 
     with st.form("add_device_form"):
-        name = st.text_input("Friendly name (e.g., FUB Lab Plug 1)")
+        name = st.text_input("Friendly Name (e.g., AC Plug 1)")
         device_id = st.text_input("Tuya Device ID")
         submitted = st.form_submit_button("Add device")
 
@@ -433,8 +433,7 @@ def device_detail_page():
 def reports_page():
     st.markdown('<div class="big-title">Reports & Aggregations</div>', unsafe_allow_html=True)
     st.info(
-        "For now, you can use each device's historical chart and the overview. "
-        "You can extend this page with room-wise / floor-wise aggregations later."
+        "This service is down for maintenance right now. We'll be back online soon. Thanks for your patience."
     )
 
 
